@@ -33,7 +33,7 @@ jobs:
           cp icons/icon-192.png android/app/src/main/assets/icons/
           cp icons/icon-512.png android/app/src/main/assets/icons/
 
-      - name: 生成 Gradle Wrapper
+      - name: 生成 Gradle Wrapper (8.5)
         run: |
           cd android
           gradle wrapper --gradle-version=8.5
