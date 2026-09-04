@@ -1,0 +1,26 @@
+{
+    "name": "五子棋 - 局域网对战",
+    "short_name": "五子棋",
+    "description": "支持人机AI对战和局域网双人对战的五子棋游戏",
+    "start_url": "index.html",
+    "display": "standalone",
+    "orientation": "portrait",
+    "background_color": "#0a0e1a",
+    "theme_color": "#0a0e1a",
+    "icons": [
+        {
+            "src": "icons/icon-192.png",
+            "sizes": "192x192",
+            "type": "image/png"
+        },
+        {
+            "src": "icons/icon-512.png",
+            "sizes": "512x512",
+            "type": "image/png",
+            "purpose": "any maskable"
+        }
+    ],
+    "categories": ["games", "entertainment"],
+    "lang": "zh-CN",
+    "dir": "ltr"
+}
