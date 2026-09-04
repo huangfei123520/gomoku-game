@@ -9,6 +9,7 @@ class SoundEngine {
 
     init() {
         try {
+            // 延迟初始化 AudioContext，在首次用户交互时创建
             const initContext = () => {
                 if (!this.ctx) {
                     this.ctx = new (window.AudioContext || window.webkitAudioContext)();
@@ -70,13 +71,16 @@ class SoundEngine {
         source.start();
     }
 
+    // 落子音效
     placePiece() {
         if (!this.enabled) return;
         this.playTone(800, 0.05, 'sine', 0.4);
         this.playNoise(0.03, 0.3);
+        // 低频共鸣
         setTimeout(() => this.playTone(200, 0.08, 'sine', 0.15), 10);
     }
 
+    // 胜利音效
     victory() {
         if (!this.enabled || !this.ensureContext()) return;
         const notes = [523, 659, 784, 1047];
@@ -89,6 +93,7 @@ class SoundEngine {
         }, notes.length * 150);
     }
 
+    // 失败音效
     defeat() {
         if (!this.enabled) return;
         const notes = [400, 350, 300, 200];
@@ -97,6 +102,7 @@ class SoundEngine {
         });
     }
 
+    // 平局音效
     draw() {
         if (!this.enabled) return;
         [400, 500, 400, 500].forEach((freq, i) => {
@@ -104,11 +110,13 @@ class SoundEngine {
         });
     }
 
+    // 按钮点击
     click() {
         if (!this.enabled) return;
         this.playTone(1200, 0.05, 'sine', 0.2);
     }
 
+    // 连接成功
     connected() {
         if (!this.enabled) return;
         [523, 659, 784].forEach((freq, i) => {
@@ -116,11 +124,13 @@ class SoundEngine {
         });
     }
 
+    // 无法落子
     invalid() {
         if (!this.enabled) return;
         this.playTone(150, 0.1, 'square', 0.15);
     }
 
+    // 对手落子提示
     opponentMove() {
         if (!this.enabled) return;
         this.playTone(600, 0.05, 'sine', 0.2);

@@ -13,6 +13,7 @@ const ASSETS = [
     'icons/icon-512.png'
 ];
 
+// 安装时预缓存所有静态资源
 self.addEventListener('install', (event) => {
     event.waitUntil(
         caches.open(CACHE_NAME).then((cache) => {
@@ -23,6 +24,7 @@ self.addEventListener('install', (event) => {
     );
 });
 
+// 激活时清理旧缓存
 self.addEventListener('activate', (event) => {
     event.waitUntil(
         caches.keys().then((keys) => {
@@ -36,11 +38,14 @@ self.addEventListener('activate', (event) => {
     );
 });
 
+// 网络优先，缓存后备策略
 self.addEventListener('fetch', (event) => {
+    // 只处理同源请求
     if (event.request.url.startsWith(self.location.origin)) {
         event.respondWith(
             fetch(event.request)
                 .then((response) => {
+                    // 缓存成功响应的副本
                     const clone = response.clone();
                     caches.open(CACHE_NAME).then((cache) => {
                         cache.put(event.request, clone);
@@ -48,6 +53,7 @@ self.addEventListener('fetch', (event) => {
                     return response;
                 })
                 .catch(() => {
+                    // 离线时从缓存读取
                     return caches.match(event.request);
                 })
         );

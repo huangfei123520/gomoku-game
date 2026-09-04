@@ -13,7 +13,7 @@ class Game {
         this.winner = null;
         this.winLine = null;
         this.lastMove = null;
-        this.mode = 'ai';
+        this.mode = 'ai'; // 'ai' | 'p2p_host' | 'p2p_join'
         this.playerColor = BLACK;
         this.history = [];
         this.initBoard();
@@ -48,6 +48,7 @@ class Game {
         this.history.push({ row, col, player: this.currentPlayer });
         this.turnCount++;
 
+        // 检查胜负
         const winResult = this.checkWin(row, col, this.currentPlayer);
         if (winResult) {
             this.isOver = true;
@@ -56,6 +57,7 @@ class Game {
             return true;
         }
 
+        // 平局
         if (this.turnCount >= BOARD_SIZE * BOARD_SIZE) {
             this.isOver = true;
             this.winner = 0;
@@ -66,16 +68,37 @@ class Game {
         return true;
     }
 
+    undo() {
+        if (this.history.length === 0) return false;
+        const last = this.history.pop();
+        this.board[last.row][last.col] = EMPTY;
+        this.currentPlayer = last.player;
+        this.turnCount--;
+        this.isOver = false;
+        this.winner = null;
+        this.winLine = null;
+        this.lastMove = this.history.length > 0 ? this.history[this.history.length - 1] : null;
+        return true;
+    }
+
     checkWin(row, col, player) {
-        const directions = [[1, 0], [0, 1], [1, 1], [1, -1]];
+        const directions = [
+            [1, 0],  // 垂直
+            [0, 1],  // 水平
+            [1, 1],  // 对角线
+            [1, -1]  // 反对角线
+        ];
+
         for (const [dr, dc] of directions) {
             let cells = [{ row, col }];
+            // 正方向
             for (let i = 1; i < 5; i++) {
                 const r = row + dr * i, c = col + dc * i;
                 if (r < 0 || r >= BOARD_SIZE || c < 0 || c >= BOARD_SIZE) break;
                 if (this.board[r][c] !== player) break;
                 cells.push({ row: r, col: c });
             }
+            // 反方向
             for (let i = 1; i < 5; i++) {
                 const r = row - dr * i, c = col - dc * i;
                 if (r < 0 || r >= BOARD_SIZE || c < 0 || c >= BOARD_SIZE) break;
@@ -109,6 +132,8 @@ class BoardRenderer {
         this.padding = 0;
         this.boardPixelSize = 0;
         this.animating = [];
+        this.winLineAnimProgress = 0;
+        this.isAnimatingWin = false;
         this.resize();
         this.setupResize();
     }
@@ -163,19 +188,35 @@ class BoardRenderer {
         const cell = this.cellSize;
         const board = this.game.board;
 
+        // 清空
         ctx.clearRect(0, 0, size, size);
+
+        // 绘制棋盘背景（木质纹理效果）
         this.drawBoardBackground(ctx, size, pad, cell);
+
+        // 绘制网格线
         this.drawGrid(ctx, size, pad, cell);
+
+        // 绘制星位（天元/星位）
         this.drawStarPoints(ctx, pad, cell);
+
+        // 绘制棋子
         this.drawPieces(ctx, board, pad, cell);
+
+        // 绘制最后落子标记
         this.drawLastMoveMarker(ctx, pad, cell);
+
+        // 绘制胜利连线
         if (this.game.winLine) {
             this.drawWinLine(ctx, pad, cell);
         }
+
+        // 绘制落子动画
         this.drawAnimations(ctx, pad, cell);
     }
 
     drawBoardBackground(ctx, size, pad, cell) {
+        // 木质渐变背景
         const gradient = ctx.createLinearGradient(0, 0, size, size);
         gradient.addColorStop(0, '#d4a853');
         gradient.addColorStop(0.2, '#c99b45');
@@ -187,6 +228,7 @@ class BoardRenderer {
         this.roundRect(ctx, 4, 4, size - 8, size - 8, 10);
         ctx.fill();
 
+        // 木纹纹理
         ctx.globalAlpha = 0.06;
         for (let i = 0; i < 40; i++) {
             const y = pad + Math.random() * (size - pad * 2);
@@ -203,6 +245,7 @@ class BoardRenderer {
         }
         ctx.globalAlpha = 1;
 
+        // 边缘阴影
         ctx.shadowColor = 'rgba(0,0,0,0.2)';
         ctx.shadowBlur = 8;
         ctx.strokeStyle = 'rgba(139,105,20,0.3)';
@@ -215,6 +258,8 @@ class BoardRenderer {
     drawGrid(ctx, size, pad, cell) {
         ctx.strokeStyle = 'rgba(80,50,20,0.5)';
         ctx.lineWidth = 1;
+
+        // 垂直线
         for (let i = 0; i < BOARD_SIZE; i++) {
             const x = pad + i * cell;
             ctx.beginPath();
@@ -222,6 +267,8 @@ class BoardRenderer {
             ctx.lineTo(x, size - pad);
             ctx.stroke();
         }
+
+        // 水平线
         for (let i = 0; i < BOARD_SIZE; i++) {
             const y = pad + i * cell;
             ctx.beginPath();
@@ -232,7 +279,11 @@ class BoardRenderer {
     }
 
     drawStarPoints(ctx, pad, cell) {
-        const stars = [[3,3],[3,7],[3,11],[7,3],[7,7],[7,11],[11,3],[11,7],[11,11]];
+        const stars = [
+            [3, 3], [3, 7], [3, 11],
+            [7, 3], [7, 7], [7, 11],
+            [11, 3], [11, 7], [11, 11]
+        ];
         const r = this.cellSize * 0.08;
         ctx.fillStyle = 'rgba(80,50,20,0.6)';
         for (const [row, col] of stars) {
@@ -256,12 +307,14 @@ class BoardRenderer {
 
     drawStone(ctx, x, y, radius, color) {
         ctx.save();
+        // 阴影
         ctx.shadowColor = 'rgba(0,0,0,0.3)';
         ctx.shadowBlur = radius * 0.3;
         ctx.shadowOffsetX = radius * 0.05;
         ctx.shadowOffsetY = radius * 0.08;
 
         if (color === BLACK) {
+            // 黑子: 带有光泽的深色渐变
             const grad = ctx.createRadialGradient(x - radius * 0.3, y - radius * 0.3, radius * 0.1, x, y, radius);
             grad.addColorStop(0, '#666');
             grad.addColorStop(0.3, '#333');
@@ -269,6 +322,7 @@ class BoardRenderer {
             grad.addColorStop(1, '#0a0a0a');
             ctx.fillStyle = grad;
         } else {
+            // 白子: 带有光泽的浅色渐变
             const grad = ctx.createRadialGradient(x - radius * 0.3, y - radius * 0.3, radius * 0.1, x, y, radius);
             grad.addColorStop(0, '#ffffff');
             grad.addColorStop(0.3, '#f5f5f5');
@@ -281,6 +335,7 @@ class BoardRenderer {
         ctx.arc(x, y, radius, 0, Math.PI * 2);
         ctx.fill();
 
+        // 高光
         ctx.shadowBlur = 0;
         ctx.shadowOffsetX = 0;
         ctx.shadowOffsetY = 0;
@@ -293,11 +348,13 @@ class BoardRenderer {
         ctx.arc(x - radius * 0.25, y - radius * 0.25, radius * 0.3, 0, Math.PI * 2);
         ctx.fill();
 
+        // 边缘描边
         ctx.strokeStyle = color === BLACK ? 'rgba(0,0,0,0.3)' : 'rgba(0,0,0,0.1)';
         ctx.lineWidth = 0.5;
         ctx.beginPath();
         ctx.arc(x, y, radius, 0, Math.PI * 2);
         ctx.stroke();
+
         ctx.restore();
     }
 
@@ -305,7 +362,9 @@ class BoardRenderer {
         const last = this.game.lastMove;
         if (!last) return;
         const { x, y } = this.getStonePosition(last.row, last.col);
-        ctx.fillStyle = '#ff4444';
+        const color = this.game.board[last.row][last.col];
+        const markerColor = color === BLACK ? '#ff4444' : '#ff4444';
+        ctx.fillStyle = markerColor;
         ctx.beginPath();
         ctx.arc(x, y, cell * 0.06, 0, Math.PI * 2);
         ctx.fill();
@@ -314,9 +373,12 @@ class BoardRenderer {
     drawWinLine(ctx, pad, cell) {
         const line = this.game.winLine;
         if (!line || line.length < 2) return;
+
         const start = this.getStonePosition(line[0].row, line[0].col);
         const end = this.getStonePosition(line[line.length - 1].row, line[line.length - 1].col);
+
         ctx.save();
+        // 发光效果
         const gradient = ctx.createLinearGradient(start.x, start.y, end.x, end.y);
         gradient.addColorStop(0, 'rgba(255,50,50,0.8)');
         gradient.addColorStop(0.5, 'rgba(255,200,50,0.9)');
@@ -330,6 +392,8 @@ class BoardRenderer {
         ctx.moveTo(start.x, start.y);
         ctx.lineTo(end.x, end.y);
         ctx.stroke();
+
+        // 白色中心线
         ctx.shadowBlur = 0;
         ctx.strokeStyle = 'rgba(255,255,255,0.6)';
         ctx.lineWidth = cell * 0.04;
@@ -339,6 +403,7 @@ class BoardRenderer {
         ctx.stroke();
         ctx.restore();
 
+        // 胜利棋子闪烁动画
         const time = Date.now() / 500;
         for (const cell of line) {
             const { x, y } = this.getStonePosition(cell.row, cell.col);
@@ -355,6 +420,7 @@ class BoardRenderer {
     }
 
     drawAnimations(ctx, pad, cell) {
+        // 落子动画：简单缩放效果
         const now = Date.now();
         const animDuration = 200;
         for (let i = this.animating.length - 1; i >= 0; i--) {

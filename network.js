@@ -12,6 +12,7 @@ class NetworkManager {
         this.onError = null;
     }
 
+    // 创建房间（主机）
     createRoom() {
         return new Promise((resolve, reject) => {
             try {
@@ -44,12 +45,20 @@ class NetworkManager {
                     reject(err);
                 });
 
+                // 超时处理
+                setTimeout(() => {
+                    if (!this.isConnected) {
+                        // 未连接成功，但peer ID已生成，继续等待
+                    }
+                }, 30000);
+
             } catch (err) {
                 reject(err);
             }
         });
     }
 
+    // 加入房间
     joinRoom(hostId) {
         return new Promise((resolve, reject) => {
             try {
@@ -65,7 +74,9 @@ class NetworkManager {
                 });
 
                 this.peer.on('open', () => {
-                    const conn = this.peer.connect(hostId, { reliable: true });
+                    const conn = this.peer.connect(hostId, {
+                        reliable: true
+                    });
                     this.conn = conn;
                     this.setupConnection();
                     this.isConnected = true;
@@ -79,6 +90,7 @@ class NetworkManager {
                     reject(err);
                 });
 
+                // 超时
                 setTimeout(() => {
                     if (!this.isConnected) {
                         reject(new Error('连接超时'));
@@ -95,15 +107,20 @@ class NetworkManager {
         this.conn.on('open', () => {
             this.isConnected = true;
         });
+
         this.conn.on('data', (data) => {
-            if (this.onMessage) this.onMessage(data);
+            if (this.onMessage) {
+                this.onMessage(data);
+            }
         });
+
         this.conn.on('close', () => {
             this.isConnected = false;
             if (this.onDisconnected) this.onDisconnected();
         });
     }
 
+    // 发送消息
     send(data) {
         if (this.conn && this.conn.open) {
             this.conn.send(data);
@@ -112,13 +129,31 @@ class NetworkManager {
         return false;
     }
 
-    sendMove(row, col) { this.send({ type: 'move', row, col }); }
-    sendRestart() { this.send({ type: 'restart' }); }
-    sendRestartAccept() { this.send({ type: 'restart_accept' }); }
+    // 发送落子
+    sendMove(row, col) {
+        this.send({ type: 'move', row, col });
+    }
 
+    // 发送重开请求
+    sendRestart() {
+        this.send({ type: 'restart' });
+    }
+
+    // 发送重开确认
+    sendRestartAccept() {
+        this.send({ type: 'restart_accept' });
+    }
+
+    // 断开连接
     disconnect() {
-        if (this.conn) { this.conn.close(); this.conn = null; }
-        if (this.peer) { this.peer.destroy(); this.peer = null; }
+        if (this.conn) {
+            this.conn.close();
+            this.conn = null;
+        }
+        if (this.peer) {
+            this.peer.destroy();
+            this.peer = null;
+        }
         this.isConnected = false;
         this.peerId = null;
     }

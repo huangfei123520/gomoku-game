@@ -13,6 +13,7 @@ class GomokuAI {
         let bestScore = -Infinity;
         let bestMove = candidates[0];
 
+        // 对候选位置进行评分 - 使用更高效的评分方法
         for (const pos of candidates) {
             const score = this.evaluatePosition(board, pos.row, pos.col, player, opponent);
             if (score > bestScore) {
@@ -28,6 +29,7 @@ class GomokuAI {
         const candidates = [];
         const visited = new Set();
 
+        // 只在已有棋子周围搜索
         let minR = BOARD_SIZE, maxR = 0, minC = BOARD_SIZE, maxC = 0;
         let hasStone = false;
 
@@ -54,6 +56,7 @@ class GomokuAI {
         for (let r = startR; r <= endR; r++) {
             for (let c = startC; c <= endC; c++) {
                 if (board[r][c] !== EMPTY) continue;
+                // 至少有一个非空邻居
                 let hasNeighbor = false;
                 for (let dr = -1; dr <= 1; dr++) {
                     for (let dc = -1; dc <= 1; dc++) {
@@ -76,6 +79,7 @@ class GomokuAI {
             }
         }
 
+        // 按到中心的距离排序，优先考虑中心区域
         candidates.sort((a, b) => {
             const distA = Math.abs(a.row - 7) + Math.abs(a.col - 7);
             const distB = Math.abs(b.row - 7) + Math.abs(b.col - 7);
@@ -86,23 +90,28 @@ class GomokuAI {
     }
 
     evaluatePosition(board, row, col, player, opponent) {
+        // 临时放置棋子
         board[row][col] = player;
         const attackScore = this.evaluatePoint(board, row, col, player);
         board[row][col] = EMPTY;
 
+        // 防守评分
         board[row][col] = opponent;
         const defenseScore = this.evaluatePoint(board, row, col, opponent);
         board[row][col] = EMPTY;
 
+        // 进攻权重略高
         return attackScore * 1.1 + defenseScore;
     }
 
     evaluatePoint(board, row, col, player) {
         const directions = [[1,0], [0,1], [1,1], [1,-1]];
         let totalScore = 0;
+
         for (const [dr, dc] of directions) {
             totalScore += this.evaluateDirection(board, row, col, dr, dc, player);
         }
+
         return totalScore;
     }
 
@@ -110,6 +119,7 @@ class GomokuAI {
         let count = 1;
         let openEnds = 0;
 
+        // 正方向
         let r = row + dr, c = col + dc;
         while (r >= 0 && r < BOARD_SIZE && c >= 0 && c < BOARD_SIZE && board[r][c] === player) {
             count++;
@@ -120,6 +130,7 @@ class GomokuAI {
             openEnds++;
         }
 
+        // 反方向
         r = row - dr;
         c = col - dc;
         while (r >= 0 && r < BOARD_SIZE && c >= 0 && c < BOARD_SIZE && board[r][c] === player) {
@@ -137,15 +148,22 @@ class GomokuAI {
     getPatternScore(count, openEnds) {
         if (count >= 5) return 100000;
         if (openEnds === 0) return 0;
+
         switch (count) {
-            case 4: return openEnds === 2 ? 10000 : 5000;
-            case 3: return openEnds === 2 ? 1000 : 500;
-            case 2: return openEnds === 2 ? 100 : 50;
-            case 1: return openEnds === 2 ? 10 : 5;
-            default: return 0;
+            case 4:
+                return openEnds === 2 ? 10000 : 5000;
+            case 3:
+                return openEnds === 2 ? 1000 : 500;
+            case 2:
+                return openEnds === 2 ? 100 : 50;
+            case 1:
+                return openEnds === 2 ? 10 : 5;
+            default:
+                return 0;
         }
     }
 
+    // 检查是否有立即获胜的走法
     getWinningMove(board, player) {
         for (let r = 0; r < BOARD_SIZE; r++) {
             for (let c = 0; c < BOARD_SIZE; c++) {
@@ -161,6 +179,7 @@ class GomokuAI {
         return null;
     }
 
+    // 检查是否形成五子连珠
     checkFive(board, row, col, player) {
         const directions = [[1,0], [0,1], [1,1], [1,-1]];
         for (const [dr, dc] of directions) {
