@@ -1,0 +1,49 @@
+name: 构建五子棋 APK
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [ main ]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: 检出代码
+        uses: actions/checkout@v4
+
+      - name: 设置 JDK 17
+        uses: actions/setup-java@v4
+        with:
+          java-version: '17'
+          distribution: 'temurin'
+
+      - name: 复制 Web 文件到 Android Assets
+        run: |
+          mkdir -p android/app/src/main/assets/icons
+          cp index.html android/app/src/main/assets/
+          cp style.css android/app/src/main/assets/
+          cp game.js android/app/src/main/assets/
+          cp ai.js android/app/src/main/assets/
+          cp sound.js android/app/src/main/assets/
+          cp network.js android/app/src/main/assets/
+          cp app.js android/app/src/main/assets/
+          cp manifest.json android/app/src/main/assets/
+          cp sw.js android/app/src/main/assets/
+          cp icons/icon-192.png android/app/src/main/assets/icons/
+          cp icons/icon-512.png android/app/src/main/assets/icons/
+
+      - name: 设置 Gradle
+        uses: gradle/actions/setup-gradle@v3
+
+      - name: 构建 Debug APK
+        run: |
+          cd android
+          gradle assembleDebug --no-daemon
+
+      - name: 上传 APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: Gomoku-APK
+          path: android/app/build/outputs/apk/debug/app-debug.apk
+          if-no-files-found: error
